@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>営業マインド編 — はじめての営業</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Noto+Serif+JP:wght@400;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --beige:      #F5EFE6;
+    --beige-dark: #E8DDD0;
+    --beige-mid:  #D9C9B8;
+    --pink:       #F2B8C0;
+    --pink-light: #FAE0E4;
+    --pink-dark:  #D98A97;
+    --brown:      #7A5C52;
+    --brown-dark: #5C3D35;
+    --text:       #4A3530;
+    --text-light: #7A6560;
+    --white:      #FFFAF8;
+  }
+
+  body {
+    font-family: 'Noto Sans JP', sans-serif;
+    background: #2C2220;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+    padding: 20px;
+    color: var(--text);
+  }
+
+  /* ── Navigation ── */
+  .nav {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 20px;
+    color: #C8B4AD;
+    font-size: 14px;
+  }
+  .nav button {
+    background: var(--pink);
+    border: none;
+    border-radius: 50%;
+    width: 40px; height: 40px;
+    font-size: 18px;
+    color: var(--white);
+    cursor: pointer;
+    transition: background .2s;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .nav button:hover { background: var(--pink-dark); }
+  .nav button:disabled { background: #6E5550; cursor: default; }
+  #slide-counter { min-width: 80px; text-align: center; }
+
+  /* ── Slide wrapper ── */
+  .slide-wrapper {
+    width: 900px;
+    max-width: 100%;
+  }
+
+  /* ── Slide base ── */
+  .slide {
+    display: none;
+    width: 900px;
+    min-height: 540px;
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0,0,0,.35);
+    position: relative;
+    background: var(--white);
+  }
+  .slide.active { display: flex; flex-direction: column; }
+
+  /* ── Decorative dots / circles ── */
+  .deco-circle {
+    position: absolute;
+    border-radius: 50%;
+    opacity: .18;
+    pointer-events: none;
+  }
+
+  /* ════════════════════════════════
+     SLIDE 1 — Title
+  ════════════════════════════════ */
+  .slide-1 {
+    background: linear-gradient(135deg, var(--beige) 0%, var(--pink-light) 100%);
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 60px 80px;
+  }
+  .slide-1 .deco-circle-1 {
+    width: 280px; height: 280px;
+    background: var(--pink);
+    top: -80px; right: -80px;
+  }
+  .slide-1 .deco-circle-2 {
+    width: 160px; height: 160px;
+    background: var(--beige-mid);
+    bottom: -40px; left: -40px;
+  }
+  .slide-1 .label {
+    font-size: 13px; letter-spacing: 4px;
+    color: var(--pink-dark); text-transform: uppercase;
+    margin-bottom: 20px; font-weight: 500;
+  }
+  .slide-1 h1 {
+    font-family: 'Noto Serif JP', serif;
+    font-size: 42px; color: var(--brown-dark);
+    line-height: 1.4; margin-bottom: 20px;
+  }
+  .slide-1 h1 span { color: var(--pink-dark); }
+  .slide-1 .sub {
+    font-size: 16px; color: var(--text-light);
+    line-height: 1.8; margin-bottom: 40px;
+  }
+  .slide-1 .target-badge {
+    display: inline-block;
+    background: var(--white);
+    border: 1.5px solid var(--pink);
+    border-radius: 30px;
+    padding: 8px 24px;
+    font-size: 14px; color: var(--brown);
+    font-weight: 500;
+  }
+
+  /* ════════════════════════════════
+     SLIDE 2 — 目次
+  ════════════════════════════════ */
+  .slide-2 {
+    background: var(--white);
+    flex-direction: row !important;
+  }
+  .slide-2 .left-bar {
+    width: 240px; flex-shrink: 0;
+    background: linear-gradient(180deg, var(--pink-light) 0%, var(--beige) 100%);
+    padding: 48px 32px;
+    display: flex; flex-direction: column; justify-content: center;
+  }
+  .slide-2 .left-bar .chapter-label {
+    font-size: 12px; letter-spacing: 3px;
+    color: var(--pink-dark); margin-bottom: 10px;
+  }
+  .slide-2 .left-bar h2 {
+    font-family: 'Noto Serif JP', serif;
+    font-size: 26px; color: var(--brown-dark); line-height: 1.5;
+  }
+  .slide-2 .right-content {
+    flex: 1; padding: 48px 40px;
+    display: flex; flex-direction: column; justify-content: center;
+  }
+  .toc-item {
+    display: flex; align-items: flex-start; gap: 16px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--beige-dark);
+  }
+  .toc-item:last-child { border-bottom: none; }
+  .toc-num {
+    width: 32px; height: 32px;
+    border-radius: 50%; flex-shrink: 0;
+    background: var(--pink-light);
+    color: var(--pink-dark); font-weight: 700;
+    font-size: 13px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .toc-text { font-size: 15px; color: var(--text); line-height: 1.6; padding-top: 6px; }
+
+  /* ════════════════════════════════
+     SLIDE — Generic header+body
+  ════════════════════════════════ */
+  .slide-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+  .slide-header {
+    background: linear-gradient(90deg, var(--pink-light) 0%, var(--beige) 100%);
+    padding: 32px 48px 28px;
+    position: relative;
+    overflow: hidden;
+  }
+  .slide-header .deco-circle {
+    width: 120px; height: 120px;
+    background: var(--pink);
+    top: -40px; right: -30px;
+  }
+  .slide-header .chapter-tag {
+    font-size: 11px; letter-spacing: 3px;
+    color: var(--pink-dark); margin-bottom: 8px; font-weight: 500;
+  }
+  .slide-header h2 {
+    font-family: 'Noto Serif JP', serif;
+    font-size: 26px; color: var(--brown-dark); line-height: 1.4;
+  }
+  .slide-header .headline {
+    margin-top: 12px;
+    background: var(--white);
+    border-left: 4px solid var(--pink-dark);
+    border-radius: 0 8px 8px 0;
+    padding: 10px 20px;
+    font-size: 15px; color: var(--brown);
+    font-style: italic; line-height: 1.6;
+    display: inline-block;
+  }
+  .slide-body {
+    flex: 1; padding: 36px 48px;
+    display: flex; flex-direction: column;
+    gap: 16px;
+  }
+
+  /* Point cards */
+  .point-card {
+    background: var(--beige);
+    border-radius: 12px;
+    padding: 16px 20px;
+    display: flex; align-items: flex-start; gap: 14px;
+  }
+  .point-card.pink { background: var(--pink-light); }
+  .point-icon {
+    font-size: 20px; flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .point-text { font-size: 15px; line-height: 1.7; color: var(--text); }
+  .point-text strong { color: var(--brown-dark); }
+
+  /* Two column */
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  /* Compare table */
+  .compare-table {
+    width: 100%;
+    border-collapse: collapse;
+    border-radius: 12px;
+    overflow: hidden;
+    font-size: 14px;
+  }
+  .compare-table th {
+    padding: 12px 16px;
+    font-size: 13px; font-weight: 700;
+    letter-spacing: 1px;
+  }
+  .compare-table th:first-child { background: #C8A0A8; color: var(--white); }
+  .compare-table th:nth-child(2) { background: #A8887A; color: var(--white); }
+  .compare-table th:nth-child(3) { background: var(--pink-dark); color: var(--white); }
+  .compare-table td {
+    padding: 11px 16px; line-height: 1.6;
+    border-bottom: 1px solid var(--beige-dark);
+  }
+  .compare-table td:first-child { background: var(--pink-light); font-weight: 500; color: var(--brown); }
+  .compare-table td:nth-child(2) { background: #F0EAE5; }
+  .compare-table td:nth-child(3) { background: var(--beige); color: var(--brown-dark); font-weight: 500; }
+  .compare-table tr:last-child td { border-bottom: none; }
+
+  /* Big quote */
+  .big-quote {
+    background: linear-gradient(135deg, var(--pink-light), var(--beige));
+    border-radius: 16px;
+    padding: 24px 28px;
+    text-align: center;
+    border: 1.5px solid var(--pink);
+  }
+  .big-quote .q-mark { font-size: 40px; color: var(--pink); line-height: 1; margin-bottom: 8px; }
+  .big-quote p { font-family: 'Noto Serif JP', serif; font-size: 17px; color: var(--brown-dark); line-height: 1.8; }
+
+  /* Step flow */
+  .step-flow {
+    display: flex; align-items: stretch; gap: 0;
+  }
+  .step-item {
+    flex: 1; text-align: center;
+    background: var(--beige);
+    padding: 16px 12px;
+    position: relative;
+    font-size: 14px; color: var(--text); line-height: 1.6;
+  }
+  .step-item:nth-child(odd) { background: var(--pink-light); }
+  .step-item .step-num {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: var(--pink-dark); color: var(--white);
+    font-size: 13px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 8px;
+  }
+  .step-item .step-label { font-weight: 700; font-size: 13px; color: var(--brown-dark); margin-bottom: 4px; }
+  .step-arrow {
+    width: 24px; flex-shrink: 0;
+    background: var(--beige-dark);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; color: var(--brown); font-weight: 700;
+  }
+
+  /* Number badge */
+  .num-badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: var(--pink-dark);
+    color: var(--white); font-size: 16px; font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  /* Footer */
+  .slide-footer {
+    padding: 12px 48px;
+    display: flex; justify-content: space-between; align-items: center;
+    background: var(--beige-dark);
+    font-size: 12px; color: var(--text-light);
+  }
+
+  /* ── Slide 12 — Summary ── */
+  .slide-summary {
+    background: linear-gradient(135deg, var(--brown-dark) 0%, #8C5050 100%);
+    align-items: center; justify-content: center;
+    text-align: center; padding: 60px 80px;
+  }
+  .slide-summary .deco-circle-1 {
+    width: 240px; height: 240px;
+    background: var(--pink);
+    top: -60px; left: -60px;
+  }
+  .slide-summary .deco-circle-2 {
+    width: 180px; height: 180px;
+    background: var(--beige);
+    bottom: -50px; right: -50px;
+  }
+  .slide-summary h2 {
+    font-family: 'Noto Serif JP', serif;
+    font-size: 32px; color: var(--white); margin-bottom: 32px;
+  }
+  .summary-flow {
+    display: flex; flex-direction: column; gap: 0;
+    align-items: center; width: 100%;
+  }
+  .summary-step {
+    background: rgba(255,255,255,.12);
+    border: 1px solid rgba(255,255,255,.25);
+    border-radius: 12px;
+    padding: 14px 32px;
+    color: var(--white); font-size: 15px; font-weight: 500;
+    width: 480px; text-align: center;
+  }
+  .summary-arrow { font-size: 22px; color: var(--pink); margin: 4px 0; }
+
+  /* Responsive */
+  @media (max-width: 940px) {
+    .slide, .slide-wrapper { width: 100%; }
+    .slide-1 { padding: 40px 32px; }
+    .slide-1 h1 { font-size: 30px; }
+    .slide-2 { flex-direction: column !important; }
+    .slide-2 .left-bar { width: 100%; padding: 32px; }
+    .slide-header, .slide-body { padding: 24px 28px; }
+    .two-col { grid-template-columns: 1fr; }
+    .step-flow { flex-direction: column; }
+    .step-arrow { display: none; }
+    .summary-step { width: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<div class="nav">
+  <button id="prevBtn" onclick="changeSlide(-1)" disabled>&#8592;</button>
+  <span id="slide-counter">1 / 12</span>
+  <button id="nextBtn" onclick="changeSlide(1)">&#8594;</button>
+</div>
+
+<div class="slide-wrapper">
+
+  <!-- ══════════════ SLIDE 1 ══════════════ -->
+  <div class="slide slide-1 active">
+    <div class="deco-circle deco-circle-1"></div>
+    <div class="deco-circle deco-circle-2"></div>
+    <p class="label">Sales Mindset</p>
+    <h1>はじめての営業<br><span>マインド講座</span></h1>
+    <p class="sub">売ることは、お客様を救うこと。<br>自分らしく、自信を持って売れる人になろう。</p>
+    <span class="target-badge">✦ 営業初心者の方へ ✦</span>
+  </div>
+
+  <!-- ══════════════ SLIDE 2 ══════════════ -->
+  <div class="slide slide-2">
+    <div class="left-bar">
+      <p class="chapter-label">CONTENTS</p>
+      <h2>この講座で学ぶこと</h2>
+    </div>
+    <div class="right-content">
+      <div class="toc-item">
+        <div class="toc-num">1</div>
+        <div class="toc-text">お客様を救うことを第一優先に考える</div>
+      </div>
+      <div class="toc-item">
+        <div class="toc-num">2</div>
+        <div class="toc-text">即断即決が当たり前という価値観を持つ</div>
+      </div>
+      <div class="toc-item">
+        <div class="toc-num">3</div>
+        <div class="toc-text">他者の価値観に振り回されない</div>
+      </div>
+      <div class="toc-item">
+        <div class="toc-num">4</div>
+        <div class="toc-text">「この人は必ず買ってくれる」と思い込む</div>
+      </div>
+      <div class="toc-item">
+        <div class="toc-num">5</div>
+        <div class="toc-text">曖昧な返事で終わらせない</div>
+      </div>
+      <div class="toc-item">
+        <div class="toc-num">6</div>
+        <div class="toc-text">断られることに慣れる・自己責任・行動する</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ SLIDE 3 ══════════════ -->
+  <div class="slide">
+    <div class="slide-content">
+      <div class="slide-header">
+        <div class="deco-circle"></div>
+        <p class="chapter-tag">CHAPTER 01</p>
+        <h2>お客様を救うことを<br>第一優先に考えよう</h2>
+        <div class="headline">「売ること」＝「お客様を救うこと」です</div>
+      </div>
+      <div class="slide-body">
+        <div class="two-col">
+          <div class="point-card">
+            <span class="point-icon">💡</span>
+            <div class="point-text">営業の<strong>土台はマインド</strong>。どんな本を読んでも、コンサルをつけても、マインドが整っていなければスキルは身につかない</div>
+          </div>
+          <div class="point-card pink">
+            <span class="point-icon">🌸</span>
+            <div class="point-text"><strong>売れない人の共通点</strong>は、本気で売りたいと思っていないこと。まず自分の意識を変えることが最初の一歩</div>
+          </div>
+          <div class="point-card pink">
+            <span class="point-icon">🤝</span>
+            <div class="point-text">商談は<strong>正当な行為</strong>。お客様は商談だと理解して会っている。嫌われることを恐れなくていい</div>
+          </div>
+          <div class="point-card">
+            <span class="point-icon">✨</span>
+            <div class="point-text">「<strong>目の前のお客様を絶対に救う</strong>」という強い気持ちが、迷いをなくし、力強いアピールへとつながる</div>
+          </div>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>営業マインド講座</span><span>Chapter 01</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ SLIDE 4 ══════════════ -->
+  <div class="slide">
+    <div class="slide-content">
+      <div class="slide-header">
+        <div class="deco-circle"></div>
+        <p class="chapter-tag">CHAPTER 02</p>
+        <h2>即断即決が当たり前、<br>という価値観を持とう</h2>
+        <div class="headline">お客様は「保留が当たり前」と思っている。だからこそあなたの価値観が大切</div>
+      </div>
+      <div class="slide-body">
+        <div class="big-quote">
+          <div class="q-mark">"</div>
+          <p>無料で説明を聞いてもらう代わりに、<br>やるかやらないか、<strong>その場で答えをいただく</strong>のが前提です。</p>
+        </div>
+        <div class="two-col">
+          <div class="point-card">
+            <span class="point-icon">🧠</span>
+            <div class="point-text">お客様の<strong>「考えます」は迷っているだけ</strong>。断りたいけど言いづらいから曖昧にしている</div>
+          </div>
+          <div class="point-card pink">
+            <span class="point-icon">⚡</span>
+            <div class="point-text">売り手（即断即決）vs 買い手（保留）の<strong>価値観の違い</strong>を理解しておくことが大事</div>
+          </div>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>営業マインド講座</span><span>Chapter 02</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ SLIDE 5 ══════════════ -->
+  <div class="slide">
+    <div class="slide-content">
+      <div class="slide-header">
+        <div class="deco-circle"></div>
+        <p class="chapter-tag">CHAPTER 03</p>
+        <h2>他者に振り回されない<br>考え方を持とう</h2>
+        <div class="headline">正義は立場によって決まる。あなたの役割は「売ること・救うこと」</div>
+      </div>
+      <div class="slide-body">
+        <div class="point-card">
+          <span class="point-icon">🌿</span>
+          <div class="point-text">売ることへの<strong>罪悪感を手放す</strong>。「売ることが悪い」という考えはあなたの役割と合っていない</div>
+        </div>
+        <div class="point-card pink">
+          <span class="point-icon">📱</span>
+          <div class="point-text">考え方はスマホのアプリのように<strong>自分で選択できる</strong>。どんな価値観で生きるかは自分次第</div>
+        </div>
+        <div class="point-card">
+          <span class="point-icon">🪞</span>
+          <div class="point-text">商談がうまくいかない時「どうせ自分じゃ無理」は<strong>ただの逃げ</strong>。なぜ売れなかったかを正直に見つめ直そう</div>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>営業マインド講座</span><span>Chapter 03</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ SLIDE 6 ══════════════ -->
+  <div class="slide">
+    <div class="slide-content">
+      <div class="slide-header">
+        <div class="deco-circle"></div>
+        <p class="chapter-tag">CHAPTER 04</p>
+        <h2>「この人は必ず買ってくれる」<br>と思い込んで接しよう</h2>
+        <div class="headline">思い込みは成約率に直結する。ポジティブな前提で接客することが大切</div>
+      </div>
+      <div class="slide-body">
+        <div class="two-col">
+          <div style="background: var(--pink-light); border-radius:12px; padding:18px; text-align:center;">
+            <p style="font-size:13px;color:var(--pink-dark);font-weight:700;margin-bottom:10px;">😊 ポジティブな思い込み</p>
+            <p style="font-size:14px;color:var(--text);line-height:1.7;">熱意が表情に出る<br>→ お客様に好印象<br>→ 言葉が伝わりやすい<br>→ <strong style="color:var(--brown-dark)">成約率アップ ↑</strong></p>
+          </div>
+          <div style="background:var(--beige);border-radius:12px;padding:18px;text-align:center;">
+            <p style="font-size:13px;color:var(--text-light);font-weight:700;margin-bottom:10px;">😰 ネガティブな思い込み</p>
+            <p style="font-size:14px;color:var(--text);line-height:1.7;">自信のなさが出る<br>→ 消極的な言葉になる<br>→ 熱意が伝わらない<br>→ <strong style="color:#A08080">成約率ダウン ↓</strong></p>
+          </div>
+        </div>
+        <div class="point-card">
+          <span class="point-icon">💫</span>
+          <div class="point-text">お客様の<strong>断り文句は鵜呑みにしない</strong>。「お金がない」と言う人でも実際には貯金があるケースが多い</div>
+        </div>
+        <div class="point-card pink">
+          <span class="point-icon">🌱</span>
+          <div class="point-text">最初は乗り気でなかった人が成約することも多い。反応が薄くても<strong>諦めずに向き合い続ける</strong>ことが大事</div>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>営業マインド講座</span><span>Chapter 04</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ SLIDE 7 ══════════════ -->
+  <div class="slide">
+    <div class="slide-content">
+      <div class="slide-header">
+        <div class="deco-circle"></div>
+        <p class="chapter-tag">CHAPTER 05</p>
+        <h2>「考えます」で<br>終わらせない</h2>
+        <div class="headline">お客様の曖昧な返事を、具体的な言葉に変えていこう</div>
+      </div>
+      <div class="slide-body">
+        <div class="point-card pink">
+          <span class="point-icon">🎯</span>
+          <div class="point-text">お客様が「考えます」と言う本当の理由は<strong>「断りたいけど言いにくい」</strong>から。本音を引き出すのがあなたの役割</div>
+        </div>
+        <div style="background:var(--beige);border-radius:12px;padding:20px;">
+          <p style="font-size:13px;font-weight:700;color:var(--brown-dark);margin-bottom:12px;">✦ 断り文句を具体化する例文</p>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <div style="background:var(--white);border-radius:8px;padding:10px 14px;font-size:14px;color:var(--text);">
+              <strong style="color:var(--pink-dark)">①</strong> 「承知しました。」（まず受け止める）
+            </div>
+            <div style="background:var(--white);border-radius:8px;padding:10px 14px;font-size:14px;color:var(--text);">
+              <strong style="color:var(--pink-dark)">②</strong> 「1つだけ確認させてください。」（クッション）
+            </div>
+            <div style="background:var(--pink-light);border-radius:8px;padding:10px 14px;font-size:14px;color:var(--brown-dark);font-weight:500;">
+              <strong style="color:var(--pink-dark)">③</strong> 「<strong>具体的に、どういったことをお考えですか？</strong>」（本音を引き出す）
+            </div>
+          </div>
+        </div>
+        <div class="point-card">
+          <span class="point-icon">💬</span>
+          <div class="point-text">費用・家族への相談・不安など<strong>具体的な懸念が出てきたら、それを一つずつ丁寧に解消</strong>していこう</div>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>営業マインド講座</span><span>Chapter 05</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ SLIDE 8 ══════════════ -->
+  <div class="slide">
+    <div class="slide-content">
+      <div class="slide-header">
+        <div class="deco-circle"></div>
+        <p class="chapter-tag">CHAPTER 06</p>
+        <h2>断られることに慣れよう<br>— 100人中3人の法則 —</h2>
+        <div class="headline">断られるのは当たり前。3人の成功にフォーカスする習慣を持とう</div>
+      </div>
+      <div class="slide-body">
+        <div class="big-quote">
+          <div class="q-mark">"</div>
+          <p>100回アプローチすれば、<br><strong>97の失敗 ＋ 3の成功</strong>が当たり前の結果です。</p>
+        </div>
+        <div class="two-col">
+          <div class="point-card">
+            <span class="point-icon">🌷</span>
+            <div class="point-text">失敗にフォーカスすると元気も笑顔もなくなる。笑顔のない人からは誰も買わない。<strong>成功の3人を見よう</strong></div>
+          </div>
+          <div class="point-card pink">
+            <span class="point-icon">💪</span>
+            <div class="point-text">地味なDMや告知を続けるからこそ見込み客に出会える。<strong>「3人の法則」</strong>がくじけそうな心を守ってくれる</div>
+          </div>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>営業マインド講座</span><span>Chapter 06</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ SLIDE 9 ══════════════ -->
+  <div class="slide">
+    <div class="slide-content">
+      <div class="slide-header">
+        <div class="deco-circle"></div>
+        <p class="chapter-tag">CHAPTER 07</p>
+        <h2>お客様の反応に<br>一喜一憂しない</h2>
+        <div class="headline">完全なYES（100%）を期待しない。お客様の気持ちは「もともと曖昧」が前提</div>
+      </div>
+      <div class="slide-body">
+        <div style="background:var(--beige);border-radius:12px;padding:20px;text-align:center;">
+          <p style="font-size:13px;color:var(--brown);margin-bottom:12px;font-weight:500;">お客様の心の中は…</p>
+          <div style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap;">
+            <div style="background:var(--pink-light);border-radius:10px;padding:12px 20px;font-size:14px;color:var(--brown-dark);">買いたい <strong>80%</strong> / 迷ってる 20%<br><span style="font-size:12px;color:var(--text-light)">→ それでも契約するお客様もいる</span></div>
+            <div style="background:var(--white);border-radius:10px;padding:12px 20px;font-size:14px;color:var(--brown-dark);">買いたい <strong>30%</strong> / 迷ってる 70%<br><span style="font-size:12px;color:var(--text-light)">→ それでも契約するお客様もいる</span></div>
+          </div>
+        </div>
+        <div class="point-card pink">
+          <span class="point-icon">🎯</span>
+          <div class="point-text">クロージングの3要素：<strong>訴求（契約してほしいと伝える）・理由・タイミング</strong>。お客様が迷っている時が成約に導くチャンス</div>
+        </div>
+        <div class="point-card">
+          <span class="point-icon">✍️</span>
+          <div class="point-text">「YES」のサインが出たら<strong>すぐに契約書を出す</strong>。100%の納得を待っていては、タイミングを逃し続けてしまう</div>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>営業マインド講座</span><span>Chapter 07</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ SLIDE 10 ══════════════ -->
+  <div class="slide">
+    <div class="slide-content">
+      <div class="slide-header">
+        <div class="deco-circle"></div>
+        <p class="chapter-tag">CHAPTER 08</p>
+        <h2>自己責任の意識が<br>成功を作る</h2>
+        <div class="headline">被害者意識を手放し、「すべて自分次第」という視点に切り替えよう</div>
+      </div>
+      <div class="slide-body">
+        <table class="compare-table">
+          <thead>
+            <tr>
+              <th>場面</th>
+              <th>😔 被害者意識</th>
+              <th>🌸 自己責任</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>売れなかった時</td>
+              <td>商品・会社・お客様のせい</td>
+              <td>自分のやり方を見直す</td>
+            </tr>
+            <tr>
+              <td>次の行動</td>
+              <td>何もしない</td>
+              <td>学習・練習・改善する</td>
+            </tr>
+            <tr>
+              <td>結果</td>
+              <td>現状維持のまま</td>
+              <td>成長して成果が出る</td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="point-card pink">
+          <span class="point-icon">🌟</span>
+          <div class="point-text">世の中の成功者は例外なく<strong>自己責任を持ち続けた人</strong>。問題を自分ごとと捉えて行動するから、成長し続けられる</div>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>営業マインド講座</span><span>Chapter 08</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ SLIDE 11 ══════════════ -->
+  <div class="slide">
+    <div class="slide-content">
+      <div class="slide-header">
+        <div class="deco-circle"></div>
+        <p class="chapter-tag">CHAPTER 09</p>
+        <h2>結果が出ない時こそ<br>行動しよう</h2>
+        <div class="headline">思考は「行動によって」現実化する。考える前にまず動く</div>
+      </div>
+      <div class="slide-body">
+        <div class="point-card">
+          <span class="point-icon">🏃‍♀️</span>
+          <div class="point-text"><strong>売れない人の共通点は行動量が少ないこと</strong>。DMや告知のアプローチ数が少なければ、反応も少ないのは当然</div>
+        </div>
+        <div style="background:var(--beige);border-radius:12px;padding:18px;">
+          <p style="font-size:13px;font-weight:700;color:var(--brown-dark);margin-bottom:12px;">✦ キャンセルが出た時の対処法</p>
+          <div style="display:flex;gap:12px;">
+            <div style="flex:1;background:var(--pink-light);border-radius:8px;padding:12px;font-size:14px;color:var(--text);line-height:1.6;">
+              <strong style="color:var(--pink-dark)">① 理由を聞く</strong><br>
+              キャンセル理由を丁寧に伺い、解決策を一緒に考える
+            </div>
+            <div style="flex:1;background:var(--white);border-radius:8px;padding:12px;font-size:14px;color:var(--text);line-height:1.6;">
+              <strong style="color:var(--brown)">② 別の提案をする</strong><br>
+              別のサービスや契約プランを提案してみる
+            </div>
+          </div>
+        </div>
+        <div class="point-card pink">
+          <span class="point-icon">💖</span>
+          <div class="point-text">モチベーションが下がった時の回復法は<strong>次の行動を起こすこと</strong>。キャンセルのダメージは行動することで薄れていく</div>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>営業マインド講座</span><span>Chapter 09</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ SLIDE 12 — Summary ══════════════ -->
+  <div class="slide slide-summary">
+    <div class="deco-circle deco-circle-1"></div>
+    <div class="deco-circle deco-circle-2"></div>
+    <h2>営業マインドの全体像</h2>
+    <div class="summary-flow">
+      <div class="summary-step">💖 お客様を救う使命感を持つ</div>
+      <div class="summary-arrow">↓</div>
+      <div class="summary-step">⚡ 即断即決の価値観・断られることへの恐れをなくす</div>
+      <div class="summary-arrow">↓</div>
+      <div class="summary-step">🌸 ポジティブな思い込みで接客・曖昧を具体化する</div>
+      <div class="summary-arrow">↓</div>
+      <div class="summary-step">🌿 自己責任で改善・行動量を増やし続ける</div>
+      <div class="summary-arrow">↓</div>
+      <div class="summary-step" style="background:rgba(242,184,192,.3);border-color:var(--pink);">✨ 成約率アップ・理想の結果へ</div>
+    </div>
+  </div>
+
+</div><!-- /slide-wrapper -->
+
+<script>
+  let current = 0;
+  const slides = document.querySelectorAll('.slide');
+  const total = slides.length;
+  const counter = document.getElementById('slide-counter');
+
+  function changeSlide(dir) {
+    slides[current].classList.remove('active');
+    current = Math.max(0, Math.min(total - 1, current + dir));
+    slides[current].classList.add('active');
+    counter.textContent = `${current + 1} / ${total}`;
+    document.getElementById('prevBtn').disabled = current === 0;
+    document.getElementById('nextBtn').disabled = current === total - 1;
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') changeSlide(1);
+    if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')   changeSlide(-1);
+  });
+</script>
+</body>
+</html>
