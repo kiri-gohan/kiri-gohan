@@ -1,21 +1,28 @@
 #!/usr/bin/env python3
 """
-Claude × Google Drive 連携ツール
+Claude × Google Drive / Threads 連携ツール
 
 Google Drive のファイルを Claude で要約・質問応答するCLIツール。
+Threads への下書き生成・投稿にも対応。
 
 使い方:
   python main.py list                          # ファイル一覧を表示
   python main.py summarize <file_id>           # ファイルを要約
   python main.py ask <file_id> "<質問>"        # ファイルについて質問
   python main.py search "<キーワード>" ask "<質問>"  # 検索してから質問
+
+  python main.py threads draft "<テーマ>"      # テーマからThreads投稿の下書きを生成
+  python main.py threads post                  # 下書きを確認して投稿
 """
 
 import sys
 import os
+import json
 import anthropic
 from dotenv import load_dotenv
 from google_drive import get_drive_service, list_files, read_file_content
+import threads_auth
+import threads_client
 
 load_dotenv()
 
@@ -25,6 +32,31 @@ if not ANTHROPIC_API_KEY:
     sys.exit(1)
 
 client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+
+THREADS_DRAFT_FILE = "threads_draft.json"
+
+THREADS_PERSONA = """あなたは看護師として働きながら、ファスティング（断食）を通じた
+心身を整える知識を発信しているThreadsアカウント「kiri_gohan_」の中の人です。
+
+文体・トーンのルール:
+- 一人称は「私」、丁寧すぎず親しみやすい口語体
+- 一文を短く改行し、余白を活かした読みやすいレイアウト
+- 気づき→自分の体験→伝えたいメッセージ、の流れでまとめる
+- 絵文字は控えめに1投稿1〜3個程度（🌿✨😌💭など）
+- 説教くさくならず、自分の経験として語る
+- 全体で300文字以内
+"""
+
+
+def generate_threads_draft(theme: str) -> str:
+    prompt = f"""{THREADS_PERSONA}
+
+以下のテーマでThreadsの投稿文を1つ作成してください。本文のみを出力し、
+前置きや説明、ハッシュタグは不要です。
+
+テーマ: {theme}
+"""
+    return ask_claude(prompt).strip()
 
 
 def ask_claude(prompt: str) -> str:
@@ -114,6 +146,53 @@ def cmd_ask(service, file_id: str, question: str):
     print(answer)
 
 
+def cmd_threads_draft(theme: str):
+    print(f"「{theme}」というテーマでThreadsの下書きを生成中...\n")
+    draft_text = generate_threads_draft(theme)
+
+    with open(THREADS_DRAFT_FILE, "w") as f:
+        json.dump({"theme": theme, "text": draft_text}, f, ensure_ascii=False, indent=2)
+
+    print("=== 下書き ===\n")
+    print(draft_text)
+    print("\n内容を確認し、投稿する場合は `python main.py threads post` を実行してください。")
+
+
+def cmd_threads_post():
+    if not os.path.exists(THREADS_DRAFT_FILE):
+        print("下書きが見つかりません。先に `python main.py threads draft \"<テーマ>\"` を実行してください。")
+        sys.exit(1)
+
+    with open(THREADS_DRAFT_FILE) as f:
+        draft = json.load(f)
+
+    print("=== 投稿予定の内容 ===\n")
+    print(draft["text"])
+    print()
+
+    answer = input("この内容でThreadsに投稿しますか？ [y/N]: ").strip().lower()
+    if answer != "y":
+        print("投稿をキャンセルしました。下書きはそのまま残しています。")
+        return
+
+    try:
+        token_data = threads_auth.get_access_token()
+    except EnvironmentError as e:
+        print(f"エラー: {e}")
+        sys.exit(1)
+
+    media_id = threads_client.create_text_post(
+        token_data["access_token"], token_data["user_id"], draft["text"]
+    )
+    permalink = threads_client.get_permalink(token_data["access_token"], media_id)
+
+    print("\n投稿しました！")
+    if permalink:
+        print(permalink)
+
+    os.remove(THREADS_DRAFT_FILE)
+
+
 def print_usage():
     print(__doc__)
 
@@ -125,6 +204,24 @@ def main():
         sys.exit(0)
 
     cmd = args[0]
+
+    if cmd == "threads":
+        if len(args) < 2:
+            print_usage()
+            sys.exit(1)
+        subcmd = args[1]
+        if subcmd == "draft":
+            if len(args) < 3:
+                print('使い方: python main.py threads draft "<テーマ>"')
+                sys.exit(1)
+            cmd_threads_draft(" ".join(args[2:]))
+        elif subcmd == "post":
+            cmd_threads_post()
+        else:
+            print(f"不明なサブコマンド: {subcmd}")
+            print_usage()
+            sys.exit(1)
+        return
 
     try:
         service = get_drive_service()
