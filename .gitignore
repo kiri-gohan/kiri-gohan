@@ -1,6 +1,8 @@
 .env
 credentials.json
 token.json
+threads_token.json
+threads_draft.json
 __pycache__/
 *.pyc
 .venv/
