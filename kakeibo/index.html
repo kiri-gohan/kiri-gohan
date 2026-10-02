@@ -151,6 +151,24 @@ input, select { width: 100%; border: 1px solid var(--line); background: var(--bg
   <section class="panel" aria-labelledby="bdTitle">
     <h2 id="bdTitle">食費の内訳</h2>
     <div class="rows" id="breakdown"><div class="empty">まだ記録がありません。</div></div>
+  </section>
+
+  <section class="panel" aria-labelledby="meTitle">
+    <div class="gauge-top">
+      <div>
+        <div class="label" id="meTitle">わたしの出費（お昼・娯楽・作業会など）</div>
+        <div class="big num"><span id="meUsed">¥0</span> <small id="meBudgetWrap" hidden>/ <span id="meBudget"></span></small></div>
+      </div>
+      <span class="pill ok" id="meBadge" hidden></span>
+    </div>
+    <div class="bar" id="meBar" aria-hidden="true" hidden><div class="fill" id="meFill" style="width:0%"></div><div class="pace" id="mePace" style="left:0%"></div></div>
+    <div class="rows" id="meBreakdown" style="margin-top:14px"></div>
+    <div class="budget-edit">
+      <label for="meBudgetInput">わたしの月予算（空欄なら予算なし）</label>
+      <input id="meBudgetInput" type="number" inputmode="numeric" min="0" step="1000" class="num">
+      <button id="saveMeBudget">変更</button>
+      <span id="meBudgetStatus"></span>
+    </div>
     <div class="other-cats num" id="otherCats"></div>
   </section>
 
@@ -168,13 +186,11 @@ input, select { width: 100%; border: 1px solid var(--line); background: var(--bg
       <label>品目・メモ<input type="text" id="fItem" placeholder="例：サラダとおにぎり"></label>
       <label>カテゴリ
         <select id="fCat">
-          <option>食費</option><option>日用品</option><option>交通</option><option>医療</option><option>娯楽</option><option>その他</option>
+          <option>食費</option><option>わたし</option><option>日用品</option><option>交通</option><option>医療</option><option>その他</option>
         </select>
       </label>
-      <label>食費の内訳
-        <select id="fSub">
-          <option>外食・中食</option><option>肉</option><option>魚</option><option>野菜</option><option>乳製品</option><option>主食</option><option>お菓子</option><option>その他食品</option>
-        </select>
+      <label><span id="fSubLabel">内訳</span>
+        <select id="fSub"></select>
       </label>
       <label class="full">支払方法
         <select id="fPay"><option>現金</option><option>楽天Edy</option><option>クレジットカード</option><option>QR決済</option><option>その他</option></select>
@@ -197,6 +213,7 @@ input, select { width: 100%; border: 1px solid var(--line); background: var(--bg
   let viewY = today.getFullYear(), viewM = today.getMonth() + 1;
   let entries = [];
   let budget = 120000;
+  let meBudget = 0;
   let db = null;
 
   const $ = id => document.getElementById(id);
@@ -239,17 +256,45 @@ input, select { width: 100%; border: 1px solid var(--line); background: var(--bg
     badge.className = "pill " + state; badge.textContent = text;
     fill.className = "fill" + (state === "ok" ? "" : " " + state);
 
-    // breakdown
+    renderBreakdown($("breakdown"), food, "この月の食費はまだ記録がありません。");
+
+    // personal
+    const me = month.filter(e => e.category === "わたし");
+    const meUsed = me.reduce((s, e) => s + (Number(e.total) || 0), 0);
+    $("meUsed").textContent = yen(meUsed);
+    const hasMe = meBudget > 0;
+    $("meBudgetWrap").hidden = !hasMe; $("meBar").hidden = !hasMe; $("meBadge").hidden = !hasMe;
+    if (hasMe) {
+      $("meBudget").textContent = yen(meBudget);
+      const mt = meBudget * dayNo / dim;
+      $("meFill").style.width = Math.min(meUsed / meBudget * 100, 100) + "%";
+      $("mePace").style.left = (dayNo / dim * 100) + "%";
+      let st = "ok", tx = `残り ${yen(meBudget - meUsed)}`;
+      if (meUsed > meBudget) { st = "bad"; tx = `予算オーバー ${yen(meUsed - meBudget)}`; }
+      else if (dayNo && meUsed > mt * 1.1) { st = "warn"; tx = `残り ${yen(meBudget - meUsed)}・ペース早め`; }
+      $("meBadge").className = "pill " + st; $("meBadge").textContent = tx;
+      $("meFill").className = "fill" + (st === "ok" ? "" : " " + st);
+    }
+    renderBreakdown($("meBreakdown"), me, "この月の記録はまだありません。");
+
+    const others = {};
+    month.filter(e => e.category !== "食費" && e.category !== "わたし").forEach(e => { others[e.category || "その他"] = (others[e.category || "その他"] || 0) + (Number(e.total) || 0); });
+    const oe = Object.entries(others);
+    $("otherCats").textContent = oe.length ? "その他の出費： " + oe.map(([k, v]) => `${k} ${yen(v)}`).join("　") : "";
+
+    renderList(month);
+  }
+
+  function renderBreakdown(bd, rows, emptyText) {
     const subs = {};
-    food.forEach(e => {
-      const items = Array.isArray(e.items) && e.items.length ? e.items : [{ sub: e.sub || "その他食品", amount: e.total }];
-      items.forEach(it => { const k = it.sub || e.sub || "その他食品"; subs[k] = (subs[k] || 0) + (Number(it.amount) || 0); });
+    rows.forEach(e => {
+      const items = Array.isArray(e.items) && e.items.length ? e.items : [{ sub: e.sub || "その他", amount: e.total }];
+      items.forEach(it => { const k = it.sub || e.sub || "その他"; subs[k] = (subs[k] || 0) + (Number(it.amount) || 0); });
     });
     const sorted = Object.entries(subs).sort((a, b) => b[1] - a[1]);
     const max = sorted.length ? sorted[0][1] : 1;
-    const bd = $("breakdown");
     bd.replaceChildren();
-    if (!sorted.length) { const d = document.createElement("div"); d.className = "empty"; d.textContent = "この月の食費はまだ記録がありません。"; bd.append(d); }
+    if (!sorted.length) { const d = document.createElement("div"); d.className = "empty"; d.textContent = emptyText; bd.append(d); }
     sorted.forEach(([k, v]) => {
       const row = document.createElement("div"); row.className = "brow";
       const name = document.createElement("span"); name.textContent = k;
@@ -258,12 +303,9 @@ input, select { width: 100%; border: 1px solid var(--line); background: var(--bg
       const amt = document.createElement("span"); amt.className = "amt num"; amt.textContent = yen(v);
       row.append(name, track, amt); bd.append(row);
     });
-    const others = {};
-    month.filter(e => e.category !== "食費").forEach(e => { others[e.category || "その他"] = (others[e.category || "その他"] || 0) + (Number(e.total) || 0); });
-    const oe = Object.entries(others);
-    $("otherCats").textContent = oe.length ? "食費以外： " + oe.map(([k, v]) => `${k} ${yen(v)}`).join("　") : "";
+  }
 
-    // list
+  function renderList(month) {
     const list = $("list");
     list.replaceChildren();
     if (!month.length) {
@@ -323,7 +365,18 @@ input, select { width: 100%; border: 1px solid var(--line); background: var(--bg
   $("prev").addEventListener("click", () => { viewM--; if (viewM < 1) { viewM = 12; viewY--; } render(); });
   $("next").addEventListener("click", () => { viewM++; if (viewM > 12) { viewM = 1; viewY++; } render(); });
 
-  $("fCat").addEventListener("change", () => { $("fSub").disabled = $("fCat").value !== "食費"; });
+  const SUBS = {
+    "食費": ["肉", "魚", "野菜", "乳製品", "主食", "お菓子", "その他食品", "外食・中食"],
+    "わたし": ["お昼ごはん", "娯楽", "作業会", "その他"]
+  };
+  function fillSubs() {
+    const opts = SUBS[$("fCat").value] || [];
+    const sel = $("fSub"); sel.replaceChildren();
+    opts.forEach(o => { const op = document.createElement("option"); op.textContent = o; sel.append(op); });
+    sel.disabled = !opts.length;
+  }
+  $("fCat").addEventListener("change", fillSubs);
+  fillSubs();
 
   $("addForm").addEventListener("submit", async ev => {
     ev.preventDefault();
@@ -332,7 +385,7 @@ input, select { width: 100%; border: 1px solid var(--line); background: var(--bg
     const amount = Math.round(Number($("fAmount").value));
     if (!amount || amount < 1) { status.textContent = "金額を入力してください。"; return; }
     const cat = $("fCat").value;
-    const sub = cat === "食費" ? $("fSub").value : "";
+    const sub = SUBS[cat] ? $("fSub").value : "";
     const memo = $("fItem").value.trim();
     const doc = {
       date: $("fDate").value, store: $("fStore").value.trim(), category: cat, sub,
@@ -355,8 +408,17 @@ input, select { width: 100%; border: 1px solid var(--line); background: var(--bg
     const v = Math.round(Number($("budgetInput").value));
     if (!v || v < 0) { $("budgetStatus").textContent = "金額を入力してください"; return; }
     if (!db) { $("budgetStatus").textContent = "保存できません"; return; }
-    try { await db.doc("settings/budget").set({ food: v }); $("budgetStatus").textContent = "変更しました"; }
+    try { await db.doc("settings/budget").set({ food: v, personal: meBudget }); $("budgetStatus").textContent = "変更しました"; }
     catch (err) { $("budgetStatus").textContent = "保存できませんでした"; }
+  });
+
+  $("saveMeBudget").addEventListener("click", async () => {
+    const raw = $("meBudgetInput").value.trim();
+    const v = raw === "" ? 0 : Math.round(Number(raw));
+    if (isNaN(v) || v < 0) { $("meBudgetStatus").textContent = "金額を入力してください"; return; }
+    if (!db) { $("meBudgetStatus").textContent = "保存できません"; return; }
+    try { await db.doc("settings/budget").set({ food: budget, personal: v }); $("meBudgetStatus").textContent = v ? "変更しました" : "予算なしにしました"; }
+    catch (err) { $("meBudgetStatus").textContent = "保存できませんでした"; }
   });
 
   render();
@@ -370,7 +432,10 @@ input, select { width: 100%; border: 1px solid var(--line); background: var(--bg
     }, () => { $("offline").hidden = false; });
     db.doc("settings/budget").onSnapshot(snap => {
       const d = snap.exists ? snap.data() : null;
-      if (d && Number(d.food)) { budget = Number(d.food); $("budgetInput").value = budget; render(); }
+      if (!d) return;
+      if (Number(d.food)) { budget = Number(d.food); $("budgetInput").value = budget; }
+      meBudget = Number(d.personal) || 0; $("meBudgetInput").value = meBudget || "";
+      render();
     });
   })();
 })();
