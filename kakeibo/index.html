@@ -1,0 +1,377 @@
+<title>わが家の家計簿</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Zen+Maru+Gothic:wght@500;700&display=swap">
+<style>
+/* Layout: one narrow ledger column — budget gauge on top, breakdown, then entries by day; add form at the foot */
+:root {
+  --bg: #f3f5f4;
+  --paper: #ffffff;
+  --fg: #1d2a2f;
+  --muted: #5f6e73;
+  --line: #d9e0de;
+  --accent: #2d5a8c;      /* 藍 */
+  --accent-soft: #dfe8f2;
+  --ok: #2f7d5b;
+  --warn: #b7791f;
+  --bad: #b83a3a;
+  --font-display: "Zen Maru Gothic", "Hiragino Maru Gothic ProN", sans-serif;
+  --font-body: "Zen Kaku Gothic New", "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #12181b; --paper: #1a2226; --fg: #e4ebec; --muted: #9aa9ad; --line: #2c383d;
+    --accent: #8fb4e0; --accent-soft: #233446; --ok: #6cc59b; --warn: #e0b056; --bad: #ef8080;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #12181b; --paper: #1a2226; --fg: #e4ebec; --muted: #9aa9ad; --line: #2c383d;
+  --accent: #8fb4e0; --accent-soft: #233446; --ok: #6cc59b; --warn: #e0b056; --bad: #ef8080;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 15px; line-height: 1.6; }
+.wrap { max-width: 720px; margin: 0 auto; padding-inline: 16px; padding-block: 24px 48px; display: grid; gap: 20px; }
+.num { font-variant-numeric: tabular-nums; }
+header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+h1 { font-family: var(--font-display); font-size: 1.5rem; margin: 0; letter-spacing: .04em; }
+h2 { font-family: var(--font-display); font-size: 1.05rem; margin: 0 0 12px; text-wrap: balance; }
+.monthnav { display: flex; align-items: center; gap: 6px; }
+.monthnav strong { font-family: var(--font-display); font-size: 1.1rem; min-width: 7.5em; text-align: center; }
+button, input, select { font: inherit; color: inherit; }
+button { cursor: pointer; border: 1px solid var(--line); background: var(--paper); border-radius: 8px; padding: 6px 12px; }
+button:hover { border-color: var(--accent); }
+button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+button.primary { background: var(--accent); border-color: var(--accent); color: var(--paper); font-weight: 700; }
+button.ghost { border-color: transparent; background: transparent; color: var(--muted); padding: 4px 8px; }
+button.danger { color: var(--bad); }
+section.panel { background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 20px; min-width: 0; }
+
+/* Budget gauge */
+.gauge-top { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.label { font-size: .78rem; color: var(--muted); letter-spacing: .08em; }
+.big { font-family: var(--font-display); font-size: 2.2rem; font-weight: 700; line-height: 1.1; }
+.big small { font-size: .95rem; color: var(--muted); font-weight: 500; }
+.bar { position: relative; height: 14px; background: var(--accent-soft); border-radius: 7px; margin: 14px 0 6px; overflow: visible; }
+.bar .fill { position: absolute; inset: 0 auto 0 0; border-radius: 7px; background: var(--ok); transition: width .4s ease; }
+.bar .fill.warn { background: var(--warn); }
+.bar .fill.bad { background: var(--bad); }
+.bar .pace { position: absolute; top: -5px; bottom: -5px; width: 2px; background: var(--fg); opacity: .55; }
+.bar-legend { display: flex; justify-content: space-between; font-size: .8rem; color: var(--muted); }
+.stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 16px; }
+.stat { display: grid; gap: 2px; padding-top: 10px; border-top: 1px solid var(--line); }
+.stat b { font-size: 1.15rem; }
+.pill { display: inline-block; font-size: .78rem; padding: 2px 10px; border-radius: 999px; font-weight: 700; }
+.pill.ok { color: var(--ok); background: color-mix(in srgb, var(--ok) 14%, transparent); }
+.pill.warn { color: var(--warn); background: color-mix(in srgb, var(--warn) 16%, transparent); }
+.pill.bad { color: var(--bad); background: color-mix(in srgb, var(--bad) 14%, transparent); }
+.budget-edit { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 12px; font-size: .85rem; color: var(--muted); }
+.budget-edit input { width: 9em; }
+
+/* Breakdown */
+.rows { display: grid; gap: 8px; }
+.brow { display: grid; grid-template-columns: 7.5em minmax(0, 1fr) 6.5em; gap: 10px; align-items: center; font-size: .9rem; }
+.brow .track { height: 8px; border-radius: 4px; background: var(--accent-soft); overflow: hidden; }
+.brow .track span { display: block; height: 100%; background: var(--accent); border-radius: 4px; }
+.brow .amt { text-align: right; }
+.other-cats { margin-top: 14px; font-size: .85rem; color: var(--muted); }
+
+/* Entries */
+.day { display: grid; gap: 6px; }
+.day + .day { margin-top: 16px; }
+.day-head { display: flex; justify-content: space-between; font-size: .82rem; color: var(--muted); border-bottom: 1px solid var(--line); padding-bottom: 4px; }
+details.entry { border-radius: 8px; }
+details.entry summary { list-style: none; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; padding: 8px 4px; cursor: pointer; align-items: center; }
+details.entry summary::-webkit-details-marker { display: none; }
+.entry-title { min-width: 0; }
+.entry-title .store { font-weight: 700; }
+.entry-title .meta { font-size: .78rem; color: var(--muted); }
+.tag { font-size: .72rem; border: 1px solid var(--line); border-radius: 4px; padding: 0 6px; margin-right: 6px; color: var(--muted); }
+.entry-amt { font-weight: 700; }
+.items { margin: 0 4px 10px; padding: 10px 12px; background: var(--bg); border-radius: 8px; font-size: .86rem; display: grid; gap: 2px; }
+.item { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 10px; }
+.item .sub { color: var(--muted); font-size: .76rem; }
+.entry-actions { display: flex; justify-content: flex-end; gap: 6px; margin-top: 6px; align-items: center; font-size: .82rem; }
+.empty { color: var(--muted); font-size: .9rem; padding: 12px 0; }
+
+/* Form */
+form.add { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+form.add label { display: grid; gap: 4px; font-size: .8rem; color: var(--muted); min-width: 0; }
+form.add .full { grid-column: 1 / -1; }
+input, select { width: 100%; border: 1px solid var(--line); background: var(--bg); border-radius: 8px; padding: 8px 10px; }
+.form-foot { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.status { font-size: .82rem; color: var(--muted); }
+.notice { font-size: .85rem; color: var(--muted); background: var(--paper); border: 1px dashed var(--line); border-radius: 10px; padding: 12px 16px; }
+
+@media (max-width: 480px) {
+  .stats { grid-template-columns: 1fr 1fr; }
+  .brow { grid-template-columns: 6em minmax(0, 1fr) 5.5em; }
+  form.add { grid-template-columns: 1fr; }
+  .big { font-size: 1.9rem; }
+}
+@media (prefers-reduced-motion: reduce) { .bar .fill { transition: none; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>わが家の家計簿</h1>
+    <div class="monthnav">
+      <button class="ghost" id="prev" aria-label="前の月">◀</button>
+      <strong id="monthLabel" class="num">—</strong>
+      <button class="ghost" id="next" aria-label="次の月">▶</button>
+    </div>
+  </header>
+
+  <div class="notice" id="offline" hidden>家計簿のデータに接続できませんでした。claude.ai にサインインした状態で開くと表示されます。</div>
+
+  <section class="panel" aria-labelledby="gaugeTitle">
+    <div class="gauge-top">
+      <div>
+        <div class="label" id="gaugeTitle">今月の食費</div>
+        <div class="big num"><span id="foodUsed">¥0</span> <small>/ <span id="foodBudget">¥120,000</span></small></div>
+      </div>
+      <span class="pill ok" id="paceBadge">ペース順調</span>
+    </div>
+    <div class="bar" aria-hidden="true"><div class="fill" id="fill" style="width:0%"></div><div class="pace" id="pace" style="left:0%"></div></div>
+    <div class="bar-legend"><span>線 ＝ 今日までの目安</span><span id="pct" class="num">0%</span></div>
+    <div class="stats">
+      <div class="stat"><span class="label">残り</span><b class="num" id="remain">¥120,000</b></div>
+      <div class="stat"><span class="label">1日あたり使える額</span><b class="num" id="perDay">—</b></div>
+      <div class="stat"><span class="label">今日までの目安</span><b class="num" id="target">—</b></div>
+    </div>
+    <div class="budget-edit">
+      <label for="budgetInput">食費の月予算</label>
+      <input id="budgetInput" type="number" inputmode="numeric" min="0" step="1000" class="num">
+      <button id="saveBudget">変更</button>
+      <span id="budgetStatus"></span>
+    </div>
+  </section>
+
+  <section class="panel" aria-labelledby="bdTitle">
+    <h2 id="bdTitle">食費の内訳</h2>
+    <div class="rows" id="breakdown"><div class="empty">まだ記録がありません。</div></div>
+    <div class="other-cats num" id="otherCats"></div>
+  </section>
+
+  <section class="panel" aria-labelledby="listTitle">
+    <h2 id="listTitle">記録</h2>
+    <div id="list"><div class="empty">読み込み中…</div></div>
+  </section>
+
+  <section class="panel" aria-labelledby="addTitle">
+    <h2 id="addTitle">支出を追加</h2>
+    <form class="add" id="addForm">
+      <label>日付<input type="date" id="fDate" required></label>
+      <label>金額（円）<input type="number" id="fAmount" inputmode="numeric" min="1" required class="num" placeholder="980"></label>
+      <label>お店・内容<input type="text" id="fStore" placeholder="例：コンビニ" required></label>
+      <label>品目・メモ<input type="text" id="fItem" placeholder="例：サラダとおにぎり"></label>
+      <label>カテゴリ
+        <select id="fCat">
+          <option>食費</option><option>日用品</option><option>交通</option><option>医療</option><option>娯楽</option><option>その他</option>
+        </select>
+      </label>
+      <label>食費の内訳
+        <select id="fSub">
+          <option>外食・中食</option><option>肉</option><option>魚</option><option>野菜</option><option>乳製品</option><option>主食</option><option>お菓子</option><option>その他食品</option>
+        </select>
+      </label>
+      <label class="full">支払方法
+        <select id="fPay"><option>現金</option><option>楽天Edy</option><option>クレジットカード</option><option>QR決済</option><option>その他</option></select>
+      </label>
+      <div class="form-foot">
+        <span class="status" id="addStatus">レシートの写真は Claude に送れば品目ごとに記録します。</span>
+        <button class="primary" type="submit" id="addBtn">追加する</button>
+      </div>
+    </form>
+  </section>
+</div>
+
+<script>
+(function () {
+  const yen = n => "¥" + Math.round(n).toLocaleString("ja-JP");
+  const pad = n => String(n).padStart(2, "0");
+  const WEEK = ["日", "月", "火", "水", "木", "金", "土"];
+  const today = new Date();
+  const todayStr = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
+  let viewY = today.getFullYear(), viewM = today.getMonth() + 1;
+  let entries = [];
+  let budget = 120000;
+  let db = null;
+
+  const $ = id => document.getElementById(id);
+  $("fDate").value = todayStr;
+  $("budgetInput").value = budget;
+
+  function monthKey() { return `${viewY}-${pad(viewM)}`; }
+
+  function render() {
+    $("monthLabel").textContent = `${viewY}年${viewM}月`;
+    const mk = monthKey();
+    const month = entries.filter(e => (e.date || "").startsWith(mk));
+    const food = month.filter(e => e.category === "食費");
+    const used = food.reduce((s, e) => s + (Number(e.total) || 0), 0);
+
+    const dim = new Date(viewY, viewM, 0).getDate();
+    const isCurrent = viewY === today.getFullYear() && viewM === today.getMonth() + 1;
+    const isPast = new Date(viewY, viewM, 0) < new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const dayNo = isCurrent ? today.getDate() : (isPast ? dim : 0);
+    const target = budget * dayNo / dim;
+    const remain = budget - used;
+    const daysLeft = isCurrent ? dim - today.getDate() + 1 : (isPast ? 0 : dim);
+
+    $("foodUsed").textContent = yen(used);
+    $("foodBudget").textContent = yen(budget);
+    $("remain").textContent = remain >= 0 ? yen(remain) : "−" + yen(-remain);
+    $("remain").style.color = remain < 0 ? "var(--bad)" : "";
+    $("perDay").textContent = daysLeft > 0 ? yen(Math.max(remain, 0) / daysLeft) : "—";
+    $("target").textContent = dayNo ? yen(target) : "—";
+    const pct = budget ? used / budget * 100 : 0;
+    $("pct").textContent = `${pct.toFixed(1)}% 使用`;
+    const fill = $("fill");
+    fill.style.width = Math.min(pct, 100) + "%";
+    $("pace").style.left = (dayNo / dim * 100) + "%";
+    const badge = $("paceBadge");
+    let state = "ok", text = "ペース順調";
+    if (used > budget) { state = "bad"; text = "予算オーバー"; }
+    else if (dayNo && used > target * 1.1) { state = "warn"; text = `目安より ${yen(used - target)} 多め`; }
+    else if (dayNo && used < target) { text = `目安より ${yen(target - used)} 少なめ`; }
+    badge.className = "pill " + state; badge.textContent = text;
+    fill.className = "fill" + (state === "ok" ? "" : " " + state);
+
+    // breakdown
+    const subs = {};
+    food.forEach(e => {
+      const items = Array.isArray(e.items) && e.items.length ? e.items : [{ sub: e.sub || "その他食品", amount: e.total }];
+      items.forEach(it => { const k = it.sub || e.sub || "その他食品"; subs[k] = (subs[k] || 0) + (Number(it.amount) || 0); });
+    });
+    const sorted = Object.entries(subs).sort((a, b) => b[1] - a[1]);
+    const max = sorted.length ? sorted[0][1] : 1;
+    const bd = $("breakdown");
+    bd.replaceChildren();
+    if (!sorted.length) { const d = document.createElement("div"); d.className = "empty"; d.textContent = "この月の食費はまだ記録がありません。"; bd.append(d); }
+    sorted.forEach(([k, v]) => {
+      const row = document.createElement("div"); row.className = "brow";
+      const name = document.createElement("span"); name.textContent = k;
+      const track = document.createElement("div"); track.className = "track";
+      const bar = document.createElement("span"); bar.style.width = (v / max * 100) + "%"; track.append(bar);
+      const amt = document.createElement("span"); amt.className = "amt num"; amt.textContent = yen(v);
+      row.append(name, track, amt); bd.append(row);
+    });
+    const others = {};
+    month.filter(e => e.category !== "食費").forEach(e => { others[e.category || "その他"] = (others[e.category || "その他"] || 0) + (Number(e.total) || 0); });
+    const oe = Object.entries(others);
+    $("otherCats").textContent = oe.length ? "食費以外： " + oe.map(([k, v]) => `${k} ${yen(v)}`).join("　") : "";
+
+    // list
+    const list = $("list");
+    list.replaceChildren();
+    if (!month.length) {
+      const d = document.createElement("div"); d.className = "empty";
+      d.textContent = db ? "この月の記録はまだありません。下のフォームから追加できます。" : "記録を読み込めませんでした。";
+      list.append(d); return;
+    }
+    const byDay = {};
+    month.forEach(e => { (byDay[e.date] = byDay[e.date] || []).push(e); });
+    Object.keys(byDay).sort().reverse().forEach(date => {
+      const day = document.createElement("div"); day.className = "day";
+      const [y, m, d] = date.split("-").map(Number);
+      const head = document.createElement("div"); head.className = "day-head num";
+      const l = document.createElement("span"); l.textContent = `${m}月${d}日（${WEEK[new Date(y, m - 1, d).getDay()]}）`;
+      const r = document.createElement("span"); r.textContent = yen(byDay[date].reduce((s, e) => s + (Number(e.total) || 0), 0));
+      head.append(l, r); day.append(head);
+      byDay[date].forEach(e => day.append(entryEl(e)));
+      list.append(day);
+    });
+  }
+
+  function entryEl(e) {
+    const det = document.createElement("details"); det.className = "entry";
+    const sum = document.createElement("summary");
+    const t = document.createElement("div"); t.className = "entry-title";
+    const store = document.createElement("div"); store.className = "store"; store.textContent = e.store || "（店名なし）";
+    const meta = document.createElement("div"); meta.className = "meta";
+    const tag = document.createElement("span"); tag.className = "tag"; tag.textContent = e.category || "その他";
+    const n = Array.isArray(e.items) ? e.items.length : 0;
+    meta.append(tag, document.createTextNode([e.memo, n > 1 ? `${n}品` : "", e.payment].filter(Boolean).join(" ・ ")));
+    t.append(store, meta);
+    const amt = document.createElement("div"); amt.className = "entry-amt num"; amt.textContent = yen(e.total || 0);
+    sum.append(t, amt); det.append(sum);
+
+    const box = document.createElement("div"); box.className = "items";
+    (Array.isArray(e.items) ? e.items : []).forEach(it => {
+      const row = document.createElement("div"); row.className = "item";
+      const nm = document.createElement("span"); nm.textContent = it.name || "";
+      const sb = document.createElement("span"); sb.className = "sub"; sb.textContent = it.sub || "";
+      const a = document.createElement("span"); a.className = "num"; a.textContent = yen(it.amount || 0);
+      row.append(nm, sb, a); box.append(row);
+    });
+    const acts = document.createElement("div"); acts.className = "entry-actions";
+    const del = document.createElement("button"); del.className = "ghost danger"; del.textContent = "この記録を削除";
+    del.addEventListener("click", async () => {
+      if (del.dataset.armed !== "1") { del.dataset.armed = "1"; del.textContent = "もう一度押すと削除します"; return; }
+      del.disabled = true;
+      try { await db.collection("entries").doc(e.id).delete(); }
+      catch (err) { del.disabled = false; del.textContent = "削除できませんでした（権限を確認してください）"; }
+    });
+    if (db) acts.append(del);
+    box.append(acts);
+    det.append(box);
+    return det;
+  }
+
+  $("prev").addEventListener("click", () => { viewM--; if (viewM < 1) { viewM = 12; viewY--; } render(); });
+  $("next").addEventListener("click", () => { viewM++; if (viewM > 12) { viewM = 1; viewY++; } render(); });
+
+  $("fCat").addEventListener("change", () => { $("fSub").disabled = $("fCat").value !== "食費"; });
+
+  $("addForm").addEventListener("submit", async ev => {
+    ev.preventDefault();
+    const status = $("addStatus");
+    if (!db) { status.textContent = "データに接続できないため保存できません。"; return; }
+    const amount = Math.round(Number($("fAmount").value));
+    if (!amount || amount < 1) { status.textContent = "金額を入力してください。"; return; }
+    const cat = $("fCat").value;
+    const sub = cat === "食費" ? $("fSub").value : "";
+    const memo = $("fItem").value.trim();
+    const doc = {
+      date: $("fDate").value, store: $("fStore").value.trim(), category: cat, sub,
+      total: amount, payment: $("fPay").value, memo,
+      items: [{ name: memo || $("fStore").value.trim(), sub, amount }],
+      createdAt: Date.now()
+    };
+    $("addBtn").disabled = true;
+    try {
+      await db.collection("entries").add(doc);
+      status.textContent = `追加しました：${doc.store} ${yen(amount)}`;
+      $("fAmount").value = ""; $("fStore").value = ""; $("fItem").value = "";
+      const [y, m] = doc.date.split("-").map(Number); viewY = y; viewM = m; render();
+    } catch (err) {
+      status.textContent = "保存できませんでした。編集権限のあるアカウントで開いているか確認してください。";
+    } finally { $("addBtn").disabled = false; }
+  });
+
+  $("saveBudget").addEventListener("click", async () => {
+    const v = Math.round(Number($("budgetInput").value));
+    if (!v || v < 0) { $("budgetStatus").textContent = "金額を入力してください"; return; }
+    if (!db) { $("budgetStatus").textContent = "保存できません"; return; }
+    try { await db.doc("settings/budget").set({ food: v }); $("budgetStatus").textContent = "変更しました"; }
+    catch (err) { $("budgetStatus").textContent = "保存できませんでした"; }
+  });
+
+  render();
+
+  (async () => {
+    db = window.claude && window.claude.use ? await window.claude.use("db") : null;
+    if (!db) { $("offline").hidden = false; render(); return; }
+    db.collection("entries").onSnapshot(snap => {
+      entries = snap.docs.map(d => Object.assign({ id: d.id }, d.data()));
+      render();
+    }, () => { $("offline").hidden = false; });
+    db.doc("settings/budget").onSnapshot(snap => {
+      const d = snap.exists ? snap.data() : null;
+      if (d && Number(d.food)) { budget = Number(d.food); $("budgetInput").value = budget; render(); }
+    });
+  })();
+})();
+</script>
