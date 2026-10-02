@@ -15,19 +15,21 @@
   --ok: #2f7d5b;
   --warn: #b7791f;
   --bad: #b83a3a;
+  --inc: #2a62b0;       /* 収入 (chart) */
+  --exp: #c46a2f;       /* 支出 (chart) */
   --font-display: "Zen Maru Gothic", "Hiragino Maru Gothic ProN", sans-serif;
   --font-body: "Zen Kaku Gothic New", "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg: #12181b; --paper: #1a2226; --fg: #e4ebec; --muted: #9aa9ad; --line: #2c383d;
-    --accent: #8fb4e0; --accent-soft: #233446; --ok: #6cc59b; --warn: #e0b056; --bad: #ef8080;
+    --accent: #8fb4e0; --accent-soft: #233446; --ok: #6cc59b; --warn: #e0b056; --bad: #ef8080; --inc: #5b95e0; --exp: #c87638;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --bg: #12181b; --paper: #1a2226; --fg: #e4ebec; --muted: #9aa9ad; --line: #2c383d;
-  --accent: #8fb4e0; --accent-soft: #233446; --ok: #6cc59b; --warn: #e0b056; --bad: #ef8080;
+  --accent: #8fb4e0; --accent-soft: #233446; --ok: #6cc59b; --warn: #e0b056; --bad: #ef8080; --inc: #5b95e0; --exp: #c87638;
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
@@ -68,6 +70,26 @@ section.panel { background: var(--paper); border: 1px solid var(--line); border-
 .pill.bad { color: var(--bad); background: color-mix(in srgb, var(--bad) 14%, transparent); }
 .budget-edit { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 12px; font-size: .85rem; color: var(--muted); }
 .budget-edit input { width: 9em; }
+
+/* Balance */
+.bal { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 4px; }
+.bal .stat b { font-family: var(--font-display); font-size: 1.5rem; }
+.bal-cats { font-size: .82rem; color: var(--muted); margin-top: 10px; }
+.legend { display: flex; gap: 14px; font-size: .8rem; color: var(--muted); margin: 18px 0 8px; align-items: center; flex-wrap: wrap; }
+.sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+.trend-wrap { overflow-x: auto; }
+table.trend { width: 100%; border-collapse: collapse; font-size: .86rem; min-width: 420px; }
+table.trend th { font-weight: 500; color: var(--muted); font-size: .76rem; text-align: right; padding: 4px 6px; border-bottom: 1px solid var(--line); }
+table.trend th:first-child, table.trend td:first-child { text-align: left; }
+table.trend td { padding: 6px; text-align: right; border-bottom: 1px solid var(--line); vertical-align: middle; }
+table.trend tr.cur td { font-weight: 700; }
+td.bars { width: 34%; }
+.tb { display: grid; gap: 2px; }
+.tb span { display: block; height: 7px; border-radius: 0 4px 4px 0; min-width: 0; }
+.tb .i { background: var(--inc); }
+.tb .x { background: var(--exp); }
+.neg { color: var(--bad); }
+@media (max-width: 480px) { table.trend { min-width: 0; font-size: .8rem; } td.bars, table.trend th:nth-child(2) { display: none; } .bal { grid-template-columns: 1fr 1fr; } .bal .stat:last-child { grid-column: 1 / -1; } }
 
 /* Breakdown */
 .rows { display: grid; gap: 8px; }
@@ -124,6 +146,26 @@ input, select { width: 100%; border: 1px solid var(--line); background: var(--bg
   </header>
 
   <div class="notice" id="offline" hidden>家計簿のデータに接続できませんでした。claude.ai にサインインした状態で開くと表示されます。</div>
+
+  <section class="panel" aria-labelledby="balTitle">
+    <div class="gauge-top">
+      <h2 id="balTitle" style="margin:0">今月の収支</h2>
+      <span class="pill ok" id="balBadge">—</span>
+    </div>
+    <div class="bal">
+      <div class="stat"><span class="label">収入</span><b class="num" id="incAmt">¥0</b></div>
+      <div class="stat"><span class="label">支出</span><b class="num" id="expAmt">¥0</b></div>
+      <div class="stat"><span class="label">収支</span><b class="num" id="balAmt">¥0</b></div>
+    </div>
+    <div class="bal-cats num" id="balCats"></div>
+    <div class="legend"><span><i class="sw" style="background:var(--inc)"></i>収入</span><span><i class="sw" style="background:var(--exp)"></i>支出</span><span>直近6か月</span></div>
+    <div class="trend-wrap">
+      <table class="trend num">
+        <thead><tr><th>月</th><th></th><th>収入</th><th>支出</th><th>収支</th></tr></thead>
+        <tbody id="trendBody"></tbody>
+      </table>
+    </div>
+  </section>
 
   <section class="panel" aria-labelledby="gaugeTitle">
     <div class="gauge-top">
@@ -204,7 +246,7 @@ input, select { width: 100%; border: 1px solid var(--line); background: var(--bg
       <label>品目・メモ<input type="text" id="fItem" placeholder="例：サラダとおにぎり"></label>
       <label>カテゴリ
         <select id="fCat">
-          <option>食費</option><option>わたし</option><option>子ども</option><option>日用品</option><option>交通</option><option>医療</option><option>その他</option>
+          <option>収入</option><option selected>食費</option><option>わたし</option><option>子ども</option><option>日用品</option><option>交通</option><option>医療</option><option>その他</option>
         </select>
       </label>
       <label><span id="fSubLabel">内訳</span>
@@ -277,15 +319,61 @@ input, select { width: 100%; border: 1px solid var(--line); background: var(--bg
 
     renderBreakdown($("breakdown"), food, "この月の食費はまだ記録がありません。");
 
+    renderBalance(month);
     renderPersonal("me", "わたし", meBudget, month, dayNo, dim);
     renderPersonal("kd", "子ども", kdBudget, month, dayNo, dim);
 
     const others = {};
-    month.filter(e => e.category !== "食費" && e.category !== "わたし" && e.category !== "子ども").forEach(e => { others[e.category || "その他"] = (others[e.category || "その他"] || 0) + (Number(e.total) || 0); });
+    month.filter(e => e.category !== "食費" && e.category !== "わたし" && e.category !== "子ども" && e.category !== "収入").forEach(e => { others[e.category || "その他"] = (others[e.category || "その他"] || 0) + (Number(e.total) || 0); });
     const oe = Object.entries(others);
     $("otherCats").textContent = oe.length ? "その他の出費： " + oe.map(([k, v]) => `${k} ${yen(v)}`).join("　") : "";
 
     renderList(month);
+  }
+
+  const isInc = e => e.category === "収入";
+  const sumOf = rows => rows.reduce((s, e) => s + (Number(e.total) || 0), 0);
+
+  function renderBalance(month) {
+    const inc = sumOf(month.filter(isInc));
+    const exp = sumOf(month.filter(e => !isInc(e)));
+    const bal = inc - exp;
+    $("incAmt").textContent = yen(inc);
+    $("expAmt").textContent = yen(exp);
+    $("balAmt").textContent = (bal < 0 ? "−" : "+") + yen(Math.abs(bal));
+    $("balAmt").className = "num" + (bal < 0 ? " neg" : "");
+    const b = $("balBadge");
+    if (!inc) { b.className = "pill warn"; b.textContent = "収入が未入力です"; }
+    else if (bal >= 0) { b.className = "pill ok"; b.textContent = "黒字"; }
+    else { b.className = "pill bad"; b.textContent = "赤字"; }
+    const cats = {};
+    month.filter(e => !isInc(e)).forEach(e => { const k = e.category || "その他"; cats[k] = (cats[k] || 0) + (Number(e.total) || 0); });
+    const ce = Object.entries(cats).sort((a, b) => b[1] - a[1]);
+    $("balCats").textContent = ce.length ? "支出の内訳： " + ce.map(([k, v]) => `${k} ${yen(v)}`).join("　") : "";
+
+    const rows = [];
+    for (let i = 5; i >= 0; i--) {
+      let y = viewY, m = viewM - i; while (m < 1) { m += 12; y--; }
+      const key = `${y}-${pad(m)}`;
+      const ms = entries.filter(e => (e.date || "").startsWith(key));
+      const mi = sumOf(ms.filter(isInc)), mx = sumOf(ms.filter(e => !isInc(e)));
+      rows.push({ y, m, mi, mx, cur: i === 0, has: ms.length > 0 });
+    }
+    const max = Math.max(1, ...rows.map(r => Math.max(r.mi, r.mx)));
+    const tb = $("trendBody"); tb.replaceChildren();
+    rows.forEach(r => {
+      const tr = document.createElement("tr"); if (r.cur) tr.className = "cur";
+      const td = t => { const c = document.createElement("td"); c.textContent = t; return c; };
+      const bars = document.createElement("td"); bars.className = "bars";
+      const box = document.createElement("div"); box.className = "tb";
+      const bi = document.createElement("span"); bi.className = "i"; bi.style.width = (r.mi / max * 100) + "%"; bi.title = `${r.m}月の収入 ${yen(r.mi)}`;
+      const bx = document.createElement("span"); bx.className = "x"; bx.style.width = (r.mx / max * 100) + "%"; bx.title = `${r.m}月の支出 ${yen(r.mx)}`;
+      box.append(bi, bx); bars.append(box);
+      const d = r.mi - r.mx;
+      const bal = td(r.has ? (d < 0 ? "−" : "+") + yen(Math.abs(d)) : "—"); if (r.has && d < 0) bal.className = "neg";
+      tr.append(td(`${r.y !== viewY ? r.y + "年" : ""}${r.m}月`), bars, td(r.has ? yen(r.mi) : "—"), td(r.has ? yen(r.mx) : "—"), bal);
+      tb.append(tr);
+    });
   }
 
   function renderPersonal(p, cat, bud, month, dayNo, dim) {
@@ -360,7 +448,7 @@ input, select { width: 100%; border: 1px solid var(--line); background: var(--bg
     const n = Array.isArray(e.items) ? e.items.length : 0;
     meta.append(tag, document.createTextNode([e.memo, n > 1 ? `${n}品` : "", e.payment].filter(Boolean).join(" ・ ")));
     t.append(store, meta);
-    const amt = document.createElement("div"); amt.className = "entry-amt num"; amt.textContent = yen(e.total || 0);
+    const amt = document.createElement("div"); amt.className = "entry-amt num"; amt.textContent = (isInc(e) ? "+" : "") + yen(e.total || 0); if (isInc(e)) amt.style.color = "var(--inc)";
     sum.append(t, amt); det.append(sum);
 
     const box = document.createElement("div"); box.className = "items";
@@ -391,6 +479,7 @@ input, select { width: 100%; border: 1px solid var(--line); background: var(--bg
   const SUBS = {
     "食費": ["肉", "魚", "野菜", "乳製品", "主食", "お菓子", "その他食品", "外食・中食"],
     "わたし": ["お昼ごはん", "娯楽", "作業会", "健康・美容", "その他"],
+    "収入": ["給料", "児童手当", "副収入", "その他"],
     "子ども": ["学校・学級費", "習い事", "服・日用品", "おこづかい", "その他"]
   };
   function fillSubs() {
