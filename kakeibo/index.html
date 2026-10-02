@@ -156,7 +156,7 @@ input, select { width: 100%; border: 1px solid var(--line); background: var(--bg
   <section class="panel" aria-labelledby="meTitle">
     <div class="gauge-top">
       <div>
-        <div class="label" id="meTitle">わたしの出費（お昼・娯楽・作業会など）</div>
+        <div class="label" id="meTitle">わたしの出費（お昼・娯楽・作業会・健康美容など）</div>
         <div class="big num"><span id="meUsed">¥0</span> <small id="meBudgetWrap" hidden>/ <span id="meBudget"></span></small></div>
       </div>
       <span class="pill ok" id="meBadge" hidden></span>
@@ -367,7 +367,7 @@ input, select { width: 100%; border: 1px solid var(--line); background: var(--bg
 
   const SUBS = {
     "食費": ["肉", "魚", "野菜", "乳製品", "主食", "お菓子", "その他食品", "外食・中食"],
-    "わたし": ["お昼ごはん", "娯楽", "作業会", "その他"]
+    "わたし": ["お昼ごはん", "娯楽", "作業会", "健康・美容", "その他"]
   };
   function fillSubs() {
     const opts = SUBS[$("fCat").value] || [];
