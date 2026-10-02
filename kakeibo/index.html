@@ -169,6 +169,24 @@ input, select { width: 100%; border: 1px solid var(--line); background: var(--bg
       <button id="saveMeBudget">変更</button>
       <span id="meBudgetStatus"></span>
     </div>
+  </section>
+
+  <section class="panel" aria-labelledby="kdTitle">
+    <div class="gauge-top">
+      <div>
+        <div class="label" id="kdTitle">子どもの出費（学校・習い事・服など）</div>
+        <div class="big num"><span id="kdUsed">¥0</span> <small id="kdBudgetWrap" hidden>/ <span id="kdBudget"></span></small></div>
+      </div>
+      <span class="pill ok" id="kdBadge" hidden></span>
+    </div>
+    <div class="bar" id="kdBar" aria-hidden="true" hidden><div class="fill" id="kdFill" style="width:0%"></div><div class="pace" id="kdPace" style="left:0%"></div></div>
+    <div class="rows" id="kdBreakdown" style="margin-top:14px"></div>
+    <div class="budget-edit">
+      <label for="kdBudgetInput">子どもの月予算（空欄なら予算なし）</label>
+      <input id="kdBudgetInput" type="number" inputmode="numeric" min="0" step="1000" class="num">
+      <button id="saveKdBudget">変更</button>
+      <span id="kdBudgetStatus"></span>
+    </div>
     <div class="other-cats num" id="otherCats"></div>
   </section>
 
@@ -214,6 +232,7 @@ input, select { width: 100%; border: 1px solid var(--line); background: var(--bg
   let entries = [];
   let budget = 120000;
   let meBudget = 0;
+  let kdBudget = 0;
   let db = null;
 
   const $ = id => document.getElementById(id);
@@ -258,31 +277,35 @@ input, select { width: 100%; border: 1px solid var(--line); background: var(--bg
 
     renderBreakdown($("breakdown"), food, "この月の食費はまだ記録がありません。");
 
-    // personal
-    const me = month.filter(e => e.category === "わたし");
-    const meUsed = me.reduce((s, e) => s + (Number(e.total) || 0), 0);
-    $("meUsed").textContent = yen(meUsed);
-    const hasMe = meBudget > 0;
-    $("meBudgetWrap").hidden = !hasMe; $("meBar").hidden = !hasMe; $("meBadge").hidden = !hasMe;
-    if (hasMe) {
-      $("meBudget").textContent = yen(meBudget);
-      const mt = meBudget * dayNo / dim;
-      $("meFill").style.width = Math.min(meUsed / meBudget * 100, 100) + "%";
-      $("mePace").style.left = (dayNo / dim * 100) + "%";
-      let st = "ok", tx = `残り ${yen(meBudget - meUsed)}`;
-      if (meUsed > meBudget) { st = "bad"; tx = `予算オーバー ${yen(meUsed - meBudget)}`; }
-      else if (dayNo && meUsed > mt * 1.1) { st = "warn"; tx = `残り ${yen(meBudget - meUsed)}・ペース早め`; }
-      $("meBadge").className = "pill " + st; $("meBadge").textContent = tx;
-      $("meFill").className = "fill" + (st === "ok" ? "" : " " + st);
-    }
-    renderBreakdown($("meBreakdown"), me, "この月の記録はまだありません。");
+    renderPersonal("me", "わたし", meBudget, month, dayNo, dim);
+    renderPersonal("kd", "子ども", kdBudget, month, dayNo, dim);
 
     const others = {};
-    month.filter(e => e.category !== "食費" && e.category !== "わたし").forEach(e => { others[e.category || "その他"] = (others[e.category || "その他"] || 0) + (Number(e.total) || 0); });
+    month.filter(e => e.category !== "食費" && e.category !== "わたし" && e.category !== "子ども").forEach(e => { others[e.category || "その他"] = (others[e.category || "その他"] || 0) + (Number(e.total) || 0); });
     const oe = Object.entries(others);
     $("otherCats").textContent = oe.length ? "その他の出費： " + oe.map(([k, v]) => `${k} ${yen(v)}`).join("　") : "";
 
     renderList(month);
+  }
+
+  function renderPersonal(p, cat, bud, month, dayNo, dim) {
+    const me = month.filter(e => e.category === cat);
+    const meUsed = me.reduce((s, e) => s + (Number(e.total) || 0), 0);
+    $(p + "Used").textContent = yen(meUsed);
+    const hasMe = bud > 0;
+    $(p + "BudgetWrap").hidden = !hasMe; $(p + "Bar").hidden = !hasMe; $(p + "Badge").hidden = !hasMe;
+    if (hasMe) {
+      $(p + "Budget").textContent = yen(bud);
+      const mt = bud * dayNo / dim;
+      $(p + "Fill").style.width = Math.min(meUsed / bud * 100, 100) + "%";
+      $(p + "Pace").style.left = (dayNo / dim * 100) + "%";
+      let st = "ok", tx = `残り ${yen(bud - meUsed)}`;
+      if (meUsed > bud) { st = "bad"; tx = `予算オーバー ${yen(meUsed - bud)}`; }
+      else if (dayNo && meUsed > mt * 1.1) { st = "warn"; tx = `残り ${yen(bud - meUsed)}・ペース早め`; }
+      $(p + "Badge").className = "pill " + st; $(p + "Badge").textContent = tx;
+      $(p + "Fill").className = "fill" + (st === "ok" ? "" : " " + st);
+    }
+    renderBreakdown($(p + "Breakdown"), me, "この月の記録はまだありません。");
   }
 
   function renderBreakdown(bd, rows, emptyText) {
@@ -409,7 +432,7 @@ input, select { width: 100%; border: 1px solid var(--line); background: var(--bg
     const v = Math.round(Number($("budgetInput").value));
     if (!v || v < 0) { $("budgetStatus").textContent = "金額を入力してください"; return; }
     if (!db) { $("budgetStatus").textContent = "保存できません"; return; }
-    try { await db.doc("settings/budget").set({ food: v, personal: meBudget }); $("budgetStatus").textContent = "変更しました"; }
+    try { await db.doc("settings/budget").set({ food: v, personal: meBudget, kids: kdBudget }); $("budgetStatus").textContent = "変更しました"; }
     catch (err) { $("budgetStatus").textContent = "保存できませんでした"; }
   });
 
@@ -418,8 +441,17 @@ input, select { width: 100%; border: 1px solid var(--line); background: var(--bg
     const v = raw === "" ? 0 : Math.round(Number(raw));
     if (isNaN(v) || v < 0) { $("meBudgetStatus").textContent = "金額を入力してください"; return; }
     if (!db) { $("meBudgetStatus").textContent = "保存できません"; return; }
-    try { await db.doc("settings/budget").set({ food: budget, personal: v }); $("meBudgetStatus").textContent = v ? "変更しました" : "予算なしにしました"; }
+    try { await db.doc("settings/budget").set({ food: budget, personal: v, kids: kdBudget }); $("meBudgetStatus").textContent = v ? "変更しました" : "予算なしにしました"; }
     catch (err) { $("meBudgetStatus").textContent = "保存できませんでした"; }
+  });
+
+  $("saveKdBudget").addEventListener("click", async () => {
+    const raw = $("kdBudgetInput").value.trim();
+    const v = raw === "" ? 0 : Math.round(Number(raw));
+    if (isNaN(v) || v < 0) { $("kdBudgetStatus").textContent = "金額を入力してください"; return; }
+    if (!db) { $("kdBudgetStatus").textContent = "保存できません"; return; }
+    try { await db.doc("settings/budget").set({ food: budget, personal: meBudget, kids: v }); $("kdBudgetStatus").textContent = v ? "変更しました" : "予算なしにしました"; }
+    catch (err) { $("kdBudgetStatus").textContent = "保存できませんでした"; }
   });
 
   render();
@@ -436,6 +468,7 @@ input, select { width: 100%; border: 1px solid var(--line); background: var(--bg
       if (!d) return;
       if (Number(d.food)) { budget = Number(d.food); $("budgetInput").value = budget; }
       meBudget = Number(d.personal) || 0; $("meBudgetInput").value = meBudget || "";
+      kdBudget = Number(d.kids) || 0; $("kdBudgetInput").value = kdBudget || "";
       render();
     });
   })();
