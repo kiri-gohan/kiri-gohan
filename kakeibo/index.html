@@ -246,7 +246,7 @@ input, select { width: 100%; border: 1px solid var(--line); background: var(--bg
       <label>品目・メモ<input type="text" id="fItem" placeholder="例：サラダとおにぎり"></label>
       <label>カテゴリ
         <select id="fCat">
-          <option>収入</option><option selected>食費</option><option>わたし</option><option>子ども</option><option>家族レジャー</option><option>日用品</option><option>交通</option><option>医療</option><option>その他</option>
+          <option>収入</option><option selected>食費</option><option>わたし</option><option>子ども</option><option>税金・保険</option><option>家族レジャー</option><option>日用品</option><option>交通</option><option>医療</option><option>その他</option>
         </select>
       </label>
       <label><span id="fSubLabel">内訳</span>
@@ -480,6 +480,7 @@ input, select { width: 100%; border: 1px solid var(--line); background: var(--bg
     "食費": ["肉", "魚", "野菜", "果物", "卵", "飲み物", "乳製品", "主食", "お菓子", "その他食品", "外食・中食"],
     "わたし": ["お昼ごはん", "娯楽", "作業会", "健康・美容", "交通費", "その他"],
     "収入": ["給料", "児童手当", "副収入", "その他"],
+    "税金・保険": ["住民税", "国民年金", "国民健康保険", "その他"],
     "子ども": ["学校・学級費", "習い事", "遊び・レジャー", "服・日用品", "おこづかい", "その他"]
   };
   function fillSubs() {
